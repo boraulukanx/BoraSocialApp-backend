@@ -3,10 +3,11 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
+const multer = require("multer");
 
 const fs = require("fs");
 const path = require("path");
-const uploadsDir = path.join(__dirname, "uploads");
+//const uploadsDir = path.join(__dirname, "uploads");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/user");
@@ -54,6 +55,18 @@ app.use("/api/privateChat", privateChatRoutes);
 app.get("*", (req, res) => {
   res.sendFile(path.join(buildPath, "index.html"));
 });
+
+const cloudinary = require("cloudinary").v2;
+
+// Configure Cloudinary with your credentials
+cloudinary.config({
+  cloud_name: "dfzxrwizo", // Replace with your Cloudinary cloud name
+  api_key: "678226781336317", // Replace with your Cloudinary API key
+  api_secret: "wK-PIEalivHmAcH93m8UwqhbFvE", // Replace with your Cloudinary API secret
+});
+
+// Multer setup to handle file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 //SOCKET IO
 const http = require("http");
@@ -109,11 +122,11 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 5000;
 
 // Serve the uploads folder
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+/*app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
-}
+}*/
 
 // Database Connection
 mongoose
