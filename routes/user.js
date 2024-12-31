@@ -218,7 +218,7 @@ router.put("/:id/location", async (req, res) => {
   }
 });
 
-/* // Set up multer for file uploads
+// Set up multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
@@ -250,63 +250,6 @@ router.put(
         { new: true }
       );
       res.status(200).json(updatedUser);
-    } catch (err) {
-      console.error("Error updating profile picture:", err);
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  }
-);*/
-
-// Multer storage for memory (not disk)
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-// Update profile picture
-router.put(
-  "/:id/profilePicture",
-  upload.single("profilePicture"),
-  async (req, res) => {
-    const { id } = req.params;
-    const { userId } = req.body; // Current logged-in user ID
-
-    if (id !== userId) {
-      return res
-        .status(403)
-        .json({ message: "You can only update your own profile picture" });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    try {
-      // Upload image to Cloudinary
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: "profile_pictures" }, // Optional folder for organization
-        async (error, cloudinaryResult) => {
-          if (error) {
-            console.error("Cloudinary upload error:", error);
-            return res
-              .status(500)
-              .json({ message: "Error uploading to Cloudinary" });
-          }
-
-          // Update user's profilePicture URL in the database
-          const updatedUser = await User.findByIdAndUpdate(
-            id,
-            { profilePicture: cloudinaryResult.secure_url },
-            { new: true }
-          );
-
-          return res
-            .status(200)
-            .json({ message: "Profile picture updated", updatedUser });
-        }
-      );
-
-      // Stream the file buffer to Cloudinary
-      const stream = result.write(req.file.buffer);
-      stream.end();
     } catch (err) {
       console.error("Error updating profile picture:", err);
       res.status(500).json({ message: "Internal Server Error" });
