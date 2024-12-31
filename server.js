@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
+const multer = require("multer");
 
 const fs = require("fs");
 const path = require("path");
@@ -21,6 +22,80 @@ app.use(bodyParser.json()); // Parses JSON requests
 
 dotenv.config();
 
+// CORS configuration
+const allowedOrigins = [
+  "https://borasocialapp-frontend.onrender.com", // Deployed frontend URL
+  "http://localhost:3000", // Local development
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true, // Allows cookies
+  })
+);
+
+// Serve static files from the React app's build folder
+const buildPath = path.join(__dirname, "../frontend/build");
+app.use(express.static(buildPath));
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/event", eventRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/privateChat", privateChatRoutes);
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(buildPath, "index.html"));
+});
+
+const cloudinary = require("cloudinary").v2;
+
+// Configure Cloudinary with your credentials
+cloudinary.config({
+  cloud_name: "dfzxrwizo", // Replace with your Cloudinary cloud name
+  api_key: "678226781336317", // Replace with your Cloudinary API key
+  api_secret: "wK-PIEalivHmAcH93m8UwqhbFvE", // Replace with your Cloudinary API secret
+});
+
+// Multer setup to handle file uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
+// File upload endpoint
+app.post("/upload", upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  try {
+    // Upload file to Cloudinary
+    const result = await cloudinary.uploader.upload_stream(
+      { resource_type: "auto" },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          res.status(500).send("Error uploading file.");
+        } else {
+          res.status(200).send({ url: result.secure_url });
+        }
+      }
+    );
+
+    const stream = result.write(req.file.buffer);
+    stream.end();
+  } catch (error) {
+    console.error("Upload error:", error);
+    res.status(500).send("Server error.");
+  }
+});
+
 //SOCKET IO
 const http = require("http");
 const socketIo = require("socket.io");
@@ -28,7 +103,7 @@ const socketIo = require("socket.io");
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000", // Frontend origin
+    origin: allowedOrigins, // Frontend origin
     methods: ["GET", "POST"],
   },
 });
@@ -89,13 +164,6 @@ mongoose
   })
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("Connection error:", err));
-
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/user", userRoutes);
-app.use("/api/event", eventRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/privateChat", privateChatRoutes);
 
 // Server
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
